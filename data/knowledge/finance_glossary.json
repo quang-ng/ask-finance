@@ -1,0 +1,17 @@
+[
+  {"id": "ebit", "text": "EBIT (Earnings Before Interest and Tax) = Gross Profit - Operating Expenses (Opex). Measures core operating profitability before financing costs and taxes."},
+  {"id": "ebitda", "text": "EBITDA = EBIT + Depreciation + Amortization. Approximates operating cash flow and is widely used for comparing company performance across capital structures."},
+  {"id": "gross_profit", "text": "Gross Profit = Revenue - Cost of Goods Sold (COGS). Represents profit after direct production costs but before operating expenses."},
+  {"id": "gross_margin", "text": "Gross Margin = (Gross Profit / Revenue) * 100. Expressed as a percentage, it shows how much of each revenue dollar remains after covering COGS."},
+  {"id": "opex", "text": "Opex (Operating Expenses) includes all costs required to run the business: headcount/salaries, marketing, IT, travel, and other overhead. Excludes COGS."},
+  {"id": "opex_variance", "text": "Opex Variance = ((Actual Opex - Budget Opex) / Budget Opex) * 100. A positive variance means spending exceeded budget; negative means under-spend."},
+  {"id": "revenue", "text": "Revenue (also called Net Sales or Turnover) is the total income generated from selling products or services before any expenses are deducted."},
+  {"id": "cogs", "text": "COGS (Cost of Goods Sold) includes direct costs attributable to producing the goods sold: raw materials, direct labor, and manufacturing overhead."},
+  {"id": "net_income", "text": "Net Income = EBIT - Interest Expense - Tax. The bottom-line profit after all expenses, interest, and taxes have been deducted from revenue."},
+  {"id": "roi", "text": "ROI (Return on Investment) = ((Return - Investment) / Investment) * 100. Measures the efficiency or profitability of an investment as a percentage."},
+  {"id": "ebit_margin", "text": "EBIT Margin = (EBIT / Revenue) * 100. Shows what percentage of revenue becomes operating profit. Higher margin indicates better operational efficiency."},
+  {"id": "variance", "text": "Variance in finance is the difference between actual and budgeted/planned figures. Favorable variance = better than budget; Unfavorable = worse than budget."},
+  {"id": "pl", "text": "P&L (Profit and Loss Statement) is a financial statement summarizing Revenue, COGS, Gross Profit, Opex, EBIT, and Net Income over a period."},
+  {"id": "hfm", "text": "HFM (Hyperion Financial Management) is Oracle's enterprise financial consolidation and reporting software used for multi-entity financial close and reporting."},
+  {"id": "sap", "text": "SAP is an enterprise resource planning (ERP) system. SAP FI/CO modules handle financial accounting and controlling, including P&L, cost center, and profit center reporting."}
+]

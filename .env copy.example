@@ -1,0 +1,9 @@
+GOOGLE_API_KEY=your_google_api_key_here
+
+# Postgres — overridden by docker-compose for the container
+DATABASE_URL=postgresql://finance:finance@localhost:5432/finance
+
+# Optional: Langfuse observability
+LANGFUSE_PUBLIC_KEY=
+LANGFUSE_SECRET_KEY=
+LANGFUSE_HOST=https://cloud.langfuse.com

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ask Finance</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #1a2744;
+      color: white;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    header h1 { font-size: 18px; font-weight: 600; }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-left: auto;
+      align-items: center;
+    }
+
+    label { font-size: 13px; color: #ccc; }
+
+    select {
+      background: #2c3e6b;
+      color: white;
+      border: 1px solid #3d5099;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    #chat-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .message {
+      max-width: 780px;
+      border-radius: 10px;
+      padding: 14px 18px;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .message.user {
+      background: #1a2744;
+      color: white;
+      align-self: flex-end;
+    }
+
+    .message.assistant {
+      background: white;
+      border: 1px solid #e0e0e0;
+      align-self: flex-start;
+      width: 100%;
+      max-width: 800px;
+    }
+
+    .message.assistant p { margin-bottom: 10px; }
+    .message.assistant p:last-child { margin-bottom: 0; }
+
+    .message.assistant table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 13px;
+      margin: 12px 0;
+    }
+
+    .message.assistant th {
+      background: #f0f4ff;
+      border: 1px solid #d0d7e8;
+      padding: 6px 10px;
+      text-align: left;
+    }
+
+    .message.assistant td {
+      border: 1px solid #e0e4f0;
+      padding: 6px 10px;
+    }
+
+    .message.assistant .mermaid {
+      margin: 14px 0;
+      background: #fafafa;
+      border-radius: 8px;
+      padding: 12px;
+      overflow-x: auto;
+    }
+
+    .meta {
+      font-size: 11px;
+      color: #999;
+      margin-top: 6px;
+    }
+
+    .typing-indicator {
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 14px 18px;
+      align-self: flex-start;
+      display: none;
+    }
+
+    .typing-indicator span {
+      display: inline-block;
+      width: 8px; height: 8px;
+      background: #aaa;
+      border-radius: 50%;
+      margin: 0 2px;
+      animation: bounce 1.2s infinite;
+    }
+
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-6px); }
+    }
+
+    #input-area {
+      background: white;
+      border-top: 1px solid #e0e0e0;
+      padding: 16px 24px;
+      display: flex;
+      gap: 10px;
+    }
+
+    #question-input {
+      flex: 1;
+      border: 1px solid #d0d0d0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 14px;
+      resize: none;
+      height: 44px;
+      max-height: 120px;
+      overflow-y: auto;
+    }
+
+    #question-input:focus { outline: none; border-color: #1a2744; }
+
+    #send-btn {
+      background: #1a2744;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 22px;
+      font-size: 14px;
+      cursor: pointer;
+      height: 44px;
+    }
+
+    #send-btn:disabled { background: #aaa; cursor: not-allowed; }
+    #send-btn:hover:not(:disabled) { background: #253563; }
+
+    .example-questions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .example-btn {
+      background: #f0f4ff;
+      border: 1px solid #c5d0f0;
+      border-radius: 16px;
+      padding: 5px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      color: #1a2744;
+    }
+
+    .example-btn:hover { background: #e0e8ff; }
+
+    .welcome {
+      text-align: center;
+      color: #888;
+      margin: auto;
+      padding: 40px;
+    }
+
+    .welcome h2 { font-size: 22px; color: #1a2744; margin-bottom: 8px; }
+    .welcome p { font-size: 14px; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Ask Finance</h1>
+    <div class="controls">
+      <label>User:</label>
+      <select id="user-select">
+        <option value="alice">Alice (Analyst — Electronics / Asia)</option>
+        <option value="bob">Bob (BU GM — Electronics / All)</option>
+        <option value="carol">Carol (BU GM — Consumer Goods / All)</option>
+        <option value="david">David (Group CFO — All BUs / All)</option>
+      </select>
+    </div>
+  </header>
+
+  <div id="chat-container">
+    <div class="welcome">
+      <h2>Finance Business Partner AI</h2>
+      <p>Ask questions about P&amp;L, Opex, EBIT trends, project ROI, and finance policies.</p>
+      <div class="example-questions">
+        <button class="example-btn" onclick="setQuestion(this.textContent)">What was Electronics EBIT in Q2 2023?</button>
+        <button class="example-btn" onclick="setQuestion(this.textContent)">Show me the EBIT trend for 2023</button>
+        <button class="example-btn" onclick="setQuestion(this.textContent)">Compare Q2 vs Q1 Opex variance for Electronics</button>
+        <button class="example-btn" onclick="setQuestion(this.textContent)">What is EBIT margin and how is it calculated?</button>
+        <button class="example-btn" onclick="setQuestion(this.textContent)">Show me all project ROI data</button>
+        <button class="example-btn" onclick="setQuestion(this.textContent)">What is the Opex variance policy?</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="typing-indicator" id="typing">
+    <span></span><span></span><span></span>
+  </div>
+
+  <div id="input-area">
+    <textarea id="question-input" placeholder="Ask a finance question..." rows="1"></textarea>
+    <button id="send-btn" onclick="sendMessage()">Send</button>
+  </div>
+
+  <script>
+    mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
+
+    const input = document.getElementById('question-input');
+    const sendBtn = document.getElementById('send-btn');
+    const chatContainer = document.getElementById('chat-container');
+    const typing = document.getElementById('typing');
+
+    // Stable thread_id per browser session — persists conversation history in Postgres
+    function getThreadId() {
+      let id = sessionStorage.getItem('ask_finance_thread_id');
+      if (!id) {
+        id = (crypto.randomUUID ?? (() => ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c => (c^(crypto.getRandomValues(new Uint8Array(1))[0]&(15>>c/4))).toString(16))))();
+        sessionStorage.setItem('ask_finance_thread_id', id);
+      }
+      return id;
+    }
+
+    // Reset thread on user switch so different roles start fresh conversations
+    document.getElementById('user-select').addEventListener('change', () => {
+      sessionStorage.removeItem('ask_finance_thread_id');
+      chatContainer.innerHTML = '';
+      chatContainer.innerHTML = `
+        <div class="welcome">
+          <h2>Finance Business Partner AI</h2>
+          <p>Ask questions about P&amp;L, Opex, EBIT trends, project ROI, and finance policies.</p>
+          <div class="example-questions">
+            <button class="example-btn" onclick="setQuestion(this.textContent)">What was Electronics EBIT in Q2 2023?</button>
+            <button class="example-btn" onclick="setQuestion(this.textContent)">Show me the EBIT trend for 2023</button>
+            <button class="example-btn" onclick="setQuestion(this.textContent)">Compare Q2 vs Q1 Opex variance for Electronics</button>
+            <button class="example-btn" onclick="setQuestion(this.textContent)">What is EBIT margin and how is it calculated?</button>
+            <button class="example-btn" onclick="setQuestion(this.textContent)">Show me all project ROI data</button>
+            <button class="example-btn" onclick="setQuestion(this.textContent)">What is the Opex variance policy?</button>
+          </div>
+        </div>`;
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    function setQuestion(text) {
+      input.value = text;
+      input.focus();
+      // Remove welcome message on first interaction
+      const welcome = document.querySelector('.welcome');
+      if (welcome) welcome.remove();
+    }
+
+    async function sendMessage() {
+      const question = input.value.trim();
+      if (!question) return;
+
+      const user = document.getElementById('user-select').value;
+
+      // Remove welcome if still present
+      const welcome = document.querySelector('.welcome');
+      if (welcome) welcome.remove();
+
+      // Append user message
+      appendMessage('user', question);
+      input.value = '';
+      sendBtn.disabled = true;
+
+      // Show typing indicator
+      chatContainer.appendChild(typing);
+      typing.style.display = 'block';
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+
+      try {
+        const res = await fetch('/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user, question, thread_id: getThreadId() }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || 'Request failed');
+        }
+
+        const data = await res.json();
+        typing.style.display = 'none';
+        await appendAssistantMessage(data.answer, data.role, data.user_bu);
+
+      } catch (err) {
+        typing.style.display = 'none';
+        appendMessage('assistant', `Error: ${err.message}`);
+      }
+
+      sendBtn.disabled = false;
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function appendMessage(role, text) {
+      const div = document.createElement('div');
+      div.className = `message ${role}`;
+      div.textContent = text;
+      chatContainer.appendChild(div);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    async function appendAssistantMessage(text, role, userBu) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'message assistant';
+
+      // Split on mermaid code fences
+      const parts = text.split(/(```mermaid[\s\S]*?```)/g);
+
+      for (const part of parts) {
+        if (part.startsWith('```mermaid')) {
+          const code = part.replace(/^```mermaid\n?/, '').replace(/```$/, '').trim();
+          const chartDiv = document.createElement('div');
+          chartDiv.className = 'mermaid';
+          chartDiv.textContent = code;
+          wrapper.appendChild(chartDiv);
+        } else if (part.trim()) {
+          // Render markdown-style tables as HTML
+          const p = document.createElement('p');
+          p.style.whiteSpace = 'pre-wrap';
+          p.textContent = part.trim();
+          wrapper.appendChild(p);
+        }
+      }
+
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.textContent = `${role.replace('_', ' ').toUpperCase()} · ${userBu}`;
+      wrapper.appendChild(meta);
+
+      chatContainer.appendChild(wrapper);
+
+      // Render all mermaid charts in this message
+      const charts = wrapper.querySelectorAll('.mermaid');
+      if (charts.length > 0) {
+        try {
+          await mermaid.run({ nodes: Array.from(charts) });
+        } catch (e) {
+          console.warn('Mermaid render error:', e);
+        }
+      }
+
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+  </script>
+</body>
+</html>

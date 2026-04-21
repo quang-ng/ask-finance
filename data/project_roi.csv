@@ -1,0 +1,9 @@
+project_name,business_unit,year,investment,return_value,roi_pct,status
+Project Alpha,Electronics,2023,5000000,7500000,50.0,Completed
+Project Beta,Electronics,2023,3000000,3600000,20.0,In Progress
+Project Gamma,Consumer Goods,2023,4000000,5200000,30.0,Completed
+Project Delta,Consumer Goods,2023,2500000,2750000,10.0,In Progress
+Project Epsilon,Electronics,2022,6000000,9600000,60.0,Completed
+Project Zeta,Consumer Goods,2022,3500000,4550000,30.0,Completed
+Project Eta,Electronics,2023,1500000,1800000,20.0,Planned
+Project Theta,Consumer Goods,2023,2000000,2600000,30.0,Planned

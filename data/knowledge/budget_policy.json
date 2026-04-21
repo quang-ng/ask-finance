@@ -1,0 +1,10 @@
+[
+  {"id": "opex_variance_policy", "text": "Opex Variance Policy: Variances up to 3% require no approval. Variances between 3%-5% require BU Manager sign-off. Variances above 5% require BU GM approval. Variances above 10% require Group CFO sign-off and Finance Committee review."},
+  {"id": "capex_approval", "text": "Capital Expenditure (Capex) Approval Limits: Projects under $500K can be approved by BU GM. Projects $500K-$2M require Group CFO approval. Projects above $2M require Board approval."},
+  {"id": "roi_threshold", "text": "Project ROI Thresholds: Minimum acceptable ROI is 15% for operational projects. Strategic projects may proceed with ROI above 10% if approved by CFO. Projects below 10% ROI require Board-level justification."},
+  {"id": "budget_reforecast", "text": "Budget Reforecast Policy: Formal reforecast happens quarterly (Q1 actuals inform H2 reforecast). Mid-quarter reforecast requires Group CFO approval and must be submitted by the 15th of the second month of each quarter."},
+  {"id": "headcount_policy", "text": "Headcount Budget Policy: New headcount requests above plan require BU GM approval for up to 2 FTEs. Above 2 FTEs requires Group CFO approval. All headcount changes must be reflected in the rolling 12-month Opex forecast."},
+  {"id": "travel_policy", "text": "Travel & Entertainment Policy: Annual T&E budget is set at 0.5% of revenue per BU. Quarterly T&E should not exceed 30% of annual budget. Overages require BU Manager pre-approval."},
+  {"id": "revenue_recognition", "text": "Revenue Recognition Policy: Revenue is recognized when goods are delivered or services are rendered per IFRS 15. Advanced payments are recorded as deferred revenue until performance obligations are met."},
+  {"id": "ebit_target", "text": "EBIT Margin Targets: Group target EBIT margin is 18-22% of revenue. Electronics BU target is 20-25%. Consumer Goods BU target is 16-20%. Sustained performance below target for 2 consecutive quarters triggers strategic review."}
+]
