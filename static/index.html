@@ -6,6 +6,7 @@
   <title>Ask Finance</title>
   <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -185,6 +186,62 @@
     .message.assistant p { margin-bottom: 10px; }
     .message.assistant p:last-child { margin-bottom: 0; }
 
+    .message.assistant h1,
+    .message.assistant h2,
+    .message.assistant h3,
+    .message.assistant h4 {
+      margin: 14px 0 6px;
+      color: #1a2744;
+      line-height: 1.3;
+    }
+    .message.assistant h1 { font-size: 18px; }
+    .message.assistant h2 { font-size: 16px; }
+    .message.assistant h3 { font-size: 15px; }
+    .message.assistant h4 { font-size: 14px; }
+
+    .message.assistant ul,
+    .message.assistant ol {
+      margin: 6px 0 10px 20px;
+    }
+    .message.assistant li { margin-bottom: 3px; }
+
+    .message.assistant strong { font-weight: 600; }
+    .message.assistant em { font-style: italic; }
+
+    .message.assistant code {
+      background: #f0f4ff;
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+
+    .message.assistant pre {
+      background: #f0f4ff;
+      border-radius: 6px;
+      padding: 10px 14px;
+      overflow-x: auto;
+      margin: 8px 0;
+    }
+
+    .message.assistant pre code {
+      background: none;
+      padding: 0;
+    }
+
+    .message.assistant hr {
+      border: none;
+      border-top: 1px solid #e0e4f0;
+      margin: 12px 0;
+    }
+
+    .message.assistant blockquote {
+      border-left: 3px solid #c5d0f0;
+      margin: 8px 0;
+      padding: 4px 12px;
+      color: #555;
+    }
+
     .message.assistant table {
       border-collapse: collapse;
       width: 100%;
@@ -212,6 +269,81 @@
       overflow-x: auto;
     }
 
+    .tool-calls-container {
+      margin-bottom: 12px;
+    }
+
+    .tool-call-card {
+      background: #f8faff;
+      border: 1px solid #dce4f5;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      overflow: hidden;
+    }
+
+    .tool-call-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .tool-call-header:hover { background: #eef2ff; }
+
+    .tool-call-check { color: #16a34a; font-size: 13px; }
+
+    .tool-call-label {
+      font-size: 12px;
+      color: #5a70a0;
+      margin-right: 2px;
+    }
+
+    .tool-call-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1a2744;
+      flex: 1;
+    }
+
+    .tool-call-chevron {
+      font-size: 10px;
+      color: #5a70a0;
+      transition: transform 0.2s;
+    }
+
+    .tool-call-chevron.open { transform: rotate(180deg); }
+
+    .tool-call-body {
+      border-top: 1px solid #dce4f5;
+      padding: 10px 12px;
+      display: none;
+    }
+
+    .tool-call-body.open { display: block; }
+
+    .tool-response-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: #7a8aaa;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .tool-response-content {
+      font-family: monospace;
+      font-size: 11px;
+      color: #444;
+      white-space: pre-wrap;
+      max-height: 220px;
+      overflow-y: auto;
+      background: #eef2ff;
+      border-radius: 4px;
+      padding: 8px 10px;
+    }
+
     .meta {
       font-size: 11px;
       color: #999;
@@ -226,9 +358,11 @@
       align-self: flex-start;
       display: none;
       margin: 0 24px 8px;
+      align-items: center;
+      gap: 8px;
     }
 
-    .typing-indicator span {
+    .typing-dots span {
       display: inline-block;
       width: 8px; height: 8px;
       background: #aaa;
@@ -237,12 +371,30 @@
       animation: bounce 1.2s infinite;
     }
 
-    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
 
     @keyframes bounce {
       0%, 80%, 100% { transform: translateY(0); }
       40% { transform: translateY(-6px); }
+    }
+
+    #typing-status {
+      font-size: 12px;
+      color: #888;
+      font-style: italic;
+    }
+
+    .message.assistant.streaming::after {
+      content: '▋';
+      display: inline-block;
+      animation: blink 0.8s step-end infinite;
+      color: #1a2744;
+      font-size: 14px;
+    }
+
+    @keyframes blink {
+      50% { opacity: 0; }
     }
 
     #input-area {
@@ -515,7 +667,8 @@
       </div>
 
       <div class="typing-indicator" id="typing">
-        <span></span><span></span><span></span>
+        <div class="typing-dots"><span></span><span></span><span></span></div>
+        <span id="typing-status"></span>
       </div>
 
       <div id="input-area">
@@ -527,6 +680,7 @@
 
   <script>
     mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
+    marked.setOptions({ breaks: true, gfm: true });
 
     const input = document.getElementById('question-input');
     const sendBtn = document.getElementById('send-btn');
@@ -720,13 +874,11 @@
       const welcome = document.getElementById('welcome-msg');
       if (welcome) welcome.remove();
 
-      // Ensure we have an active thread
       if (!activeThreadId) startNewThread();
 
       const threadId = activeThreadId;
       const isNewConversation = !getConversation(user, threadId);
 
-      // Create the conversation entry on the first message
       if (isNewConversation) {
         const now = new Date().toISOString();
         upsertConversation(user, {
@@ -743,17 +895,18 @@
       input.value = '';
       sendBtn.disabled = true;
 
-      // Persist user message
       const conv = getConversation(user, threadId);
       conv.messages.push({ role: 'user', text: question });
       conv.updated_at = new Date().toISOString();
       upsertConversation(user, conv);
 
-      typing.style.display = 'block';
+      const typingStatus = document.getElementById('typing-status');
+      typingStatus.textContent = '';
+      typing.style.display = 'flex';
       chatContainer.scrollTop = chatContainer.scrollHeight;
 
       try {
-        const res = await fetch('/chat', {
+        const res = await fetch('/chat/stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user, question, thread_id: threadId }),
@@ -764,19 +917,81 @@
           throw new Error(err.detail || 'Request failed');
         }
 
-        const data = await res.json();
-        typing.style.display = 'none';
-        await appendAssistantMessage(data.answer, data.role, data.user_bu, data.tools_used, data.data_sources);
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let sseBuffer = '';
+        let streamWrapper = null;
+        let toolsContainer = null;
+        let textContainer = null;
+        let streamText = '';
+        let doneData = null;
 
-        // Persist assistant message
+        function ensureStreamWrapper() {
+          if (!streamWrapper) {
+            typing.style.display = 'none';
+            streamWrapper = document.createElement('div');
+            streamWrapper.className = 'message assistant streaming';
+            toolsContainer = document.createElement('div');
+            toolsContainer.className = 'tool-calls-container';
+            textContainer = document.createElement('div');
+            streamWrapper.appendChild(toolsContainer);
+            streamWrapper.appendChild(textContainer);
+            chatContainer.appendChild(streamWrapper);
+          }
+        }
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          sseBuffer += decoder.decode(value, { stream: true });
+          const lines = sseBuffer.split('\n');
+          sseBuffer = lines.pop();
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const evt = JSON.parse(line.slice(6));
+
+            if (evt.type === 'token') {
+              ensureStreamWrapper();
+              streamText += evt.content;
+              textContainer.textContent = streamText;
+              chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            } else if (evt.type === 'tool_result') {
+              ensureStreamWrapper();
+              toolsContainer.appendChild(createToolCard(evt.name, evt.content));
+              chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            } else if (evt.type === 'status') {
+              typingStatus.textContent = evt.message;
+
+            } else if (evt.type === 'done') {
+              doneData = evt;
+
+            } else if (evt.type === 'error') {
+              throw new Error(evt.message);
+            }
+          }
+        }
+
+        typing.style.display = 'none';
+
+        if (streamWrapper) {
+          streamWrapper.classList.remove('streaming');
+          textContainer.innerHTML = '';
+          await renderAssistantContent(streamWrapper, streamText, doneData || {}, textContainer);
+        }
+
+        const finalData = doneData || {};
         const updatedConv = getConversation(user, threadId);
         updatedConv.messages.push({
           role: 'assistant',
-          text: data.answer,
-          role_label: data.role,
-          user_bu: data.user_bu,
-          tools_used: data.tools_used || [],
-          data_sources: data.data_sources || [],
+          text: streamText,
+          role_label: finalData.role,
+          user_bu: finalData.user_bu,
+          tools_used: finalData.tools_used || [],
+          data_sources: finalData.data_sources || [],
         });
         updatedConv.updated_at = new Date().toISOString();
         upsertConversation(user, updatedConv);
@@ -792,6 +1007,39 @@
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
+    // ── Tool call cards ───────────────────────────────────────────────────────
+
+    function createToolCard(name, content) {
+      const card = document.createElement('div');
+      card.className = 'tool-call-card';
+
+      const header = document.createElement('div');
+      header.className = 'tool-call-header';
+      header.innerHTML = `
+        <span class="tool-call-check">✓</span>
+        <span class="tool-call-label">Used tool:</span>
+        <span class="tool-call-name">${escapeHtml(name)}</span>
+        <span class="tool-call-chevron">&#9660;</span>
+      `;
+
+      const body = document.createElement('div');
+      body.className = 'tool-call-body';
+      body.innerHTML = `
+        <div class="tool-response-label">Tool response:</div>
+        <div class="tool-response-content">${escapeHtml(content)}</div>
+      `;
+
+      header.addEventListener('click', () => {
+        const chevron = header.querySelector('.tool-call-chevron');
+        body.classList.toggle('open');
+        chevron.classList.toggle('open');
+      });
+
+      card.appendChild(header);
+      card.appendChild(body);
+      return card;
+    }
+
     // ── Message rendering ─────────────────────────────────────────────────────
 
     function appendMessage(role, text) {
@@ -802,40 +1050,38 @@
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
-    async function appendAssistantMessage(text, role, userBu, toolsUsed = [], dataSources = []) {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'message assistant';
+    async function renderAssistantContent(wrapper, text, meta = {}, contentEl = null) {
+      const target = contentEl || wrapper;
+      const { role, user_bu: userBu, tools_used: toolsUsed = [], data_sources: dataSources = [] } = meta;
 
       const parts = text.split(/(```mermaid[\s\S]*?```)/g);
-
       for (const part of parts) {
         if (part.startsWith('```mermaid')) {
           const code = part.replace(/^```mermaid\n?/, '').replace(/```$/, '').trim();
           const chartDiv = document.createElement('div');
           chartDiv.className = 'mermaid';
           chartDiv.textContent = code;
-          wrapper.appendChild(chartDiv);
+          target.appendChild(chartDiv);
         } else if (part.trim()) {
-          const p = document.createElement('p');
-          p.style.whiteSpace = 'pre-wrap';
-          p.textContent = part.trim();
-          wrapper.appendChild(p);
+          const div = document.createElement('div');
+          div.innerHTML = marked.parse(part);
+          target.appendChild(div);
         }
       }
 
-      const meta = document.createElement('div');
-      meta.className = 'meta';
-      const roleLabel = role.replace('_', ' ').toUpperCase();
-      const buLabel = userBu || 'All';
-      const sourceParts = [];
-      if (dataSources && dataSources.length) sourceParts.push(`Source: ${dataSources.join(', ')}`);
-      if (toolsUsed && toolsUsed.length) sourceParts.push(`Tools: ${toolsUsed.join(', ')}`);
-      meta.textContent = [roleLabel + ' · ' + buLabel, ...sourceParts].join(' · ');
-      wrapper.appendChild(meta);
+      if (role) {
+        const metaDiv = document.createElement('div');
+        metaDiv.className = 'meta';
+        const roleLabel = role.replace('_', ' ').toUpperCase();
+        const buLabel = userBu || 'All';
+        const sourceParts = [];
+        if (dataSources.length) sourceParts.push(`Source: ${dataSources.join(', ')}`);
+        if (toolsUsed.length) sourceParts.push(`Tools: ${toolsUsed.join(', ')}`);
+        metaDiv.textContent = [roleLabel + ' · ' + buLabel, ...sourceParts].join(' · ');
+        wrapper.appendChild(metaDiv);
+      }
 
-      chatContainer.appendChild(wrapper);
-
-      const charts = wrapper.querySelectorAll('.mermaid');
+      const charts = target.querySelectorAll('.mermaid');
       if (charts.length > 0) {
         try {
           await mermaid.run({ nodes: Array.from(charts) });
@@ -845,6 +1091,13 @@
       }
 
       chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    async function appendAssistantMessage(text, role, userBu, toolsUsed = [], dataSources = []) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'message assistant';
+      chatContainer.appendChild(wrapper);
+      await renderAssistantContent(wrapper, text, { role, user_bu: userBu, tools_used: toolsUsed, data_sources: dataSources });
     }
 
     // ── Dashboard ─────────────────────────────────────────────────────────────

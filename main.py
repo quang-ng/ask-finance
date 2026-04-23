@@ -1,3 +1,4 @@
+import json
 import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -5,7 +6,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -132,6 +133,127 @@ async def chat(request: ChatRequest):
         timestamp=datetime.now().isoformat(),
         tools_used=tools_used,
         data_sources=data_sources,
+    )
+
+
+_ROUTING_NAMES = ("qa_agent", "analytics_agent", "report_agent")
+
+
+@app.post("/chat/stream")
+async def chat_stream(request: ChatRequest):
+    graph = app.state.graph
+    profile = ROLE_PROFILES.get(request.user, ROLE_PROFILES["alice"])
+
+    config = {
+        "configurable": {
+            "thread_id": request.thread_id,
+            "role": profile["role"],
+            "user_bu": profile["user_bu"],
+            "user_region": profile["user_region"],
+        }
+    }
+
+    async def generate():
+        from langchain_core.messages import HumanMessage
+
+        tools_used: list[str] = []
+        data_sources: list[str] = []
+
+        sup_buf: list[str] = []
+        sup_decided = False
+        sup_streaming = False
+        tokens_yielded = False
+        specialist_final_content = ""
+
+        def _is_routing_prefix(text: str) -> bool:
+            t = text.strip().lower()
+            return any(name.startswith(t) for name in _ROUTING_NAMES)
+
+        def _extract_content(obj) -> str:
+            c = obj.content if hasattr(obj, "content") else obj
+            if isinstance(c, list):
+                return "".join(
+                    b.get("text", "") if isinstance(b, dict) else str(b) for b in c
+                )
+            return c if isinstance(c, str) else ""
+
+        try:
+            async for event in graph.astream_events(
+                {"messages": [HumanMessage(content=request.question)]},
+                config=config,
+                version="v2",
+            ):
+                kind = event["event"]
+                node = event.get("metadata", {}).get("langgraph_node", "")
+
+                if kind == "on_chat_model_stream" and node == "supervisor":
+                    chunk = event["data"]["chunk"]
+                    content = _extract_content(chunk)
+                    if not content:
+                        continue
+                    if sup_decided:
+                        if sup_streaming:
+                            tokens_yielded = True
+                            yield f"data: {json.dumps({'type': 'token', 'content': content})}\n\n"
+                    else:
+                        sup_buf.append(content)
+                        accumulated = "".join(sup_buf).strip()
+                        if not _is_routing_prefix(accumulated) and len(accumulated) >= 5:
+                            sup_decided = True
+                            sup_streaming = True
+                            tokens_yielded = True
+                            yield f"data: {json.dumps({'type': 'token', 'content': accumulated})}\n\n"
+                            sup_buf.clear()
+
+                elif kind == "on_chat_model_end" and node == "supervisor":
+                    if sup_buf:
+                        text = "".join(sup_buf).strip().lower()
+                        if text not in _ROUTING_NAMES:
+                            tokens_yielded = True
+                            yield f"data: {json.dumps({'type': 'token', 'content': ''.join(sup_buf)})}\n\n"
+                    sup_buf.clear()
+                    sup_decided = False
+                    sup_streaming = False
+
+                elif kind == "on_chat_model_end" and node in _ROUTING_NAMES:
+                    output = event["data"].get("output", None)
+                    if output is not None:
+                        has_tool_calls = bool(getattr(output, "tool_calls", []))
+                        if not has_tool_calls:
+                            specialist_final_content = _extract_content(output)
+
+                elif kind == "on_tool_start":
+                    name = event.get("name", "")
+                    if name:
+                        if name not in tools_used:
+                            tools_used.append(name)
+                        args = event["data"].get("input", {})
+                        if isinstance(args, dict):
+                            dt = args.get("data_type", "")
+                            if dt and dt not in data_sources:
+                                data_sources.append(dt.upper())
+                        yield f"data: {json.dumps({'type': 'status', 'message': f'Using {name}…'})}\n\n"
+
+                elif kind == "on_tool_end":
+                    name = event.get("name", "")
+                    output = event["data"].get("output", "")
+                    content = _extract_content(output)
+                    if name and content:
+                        yield f"data: {json.dumps({'type': 'tool_result', 'name': name, 'content': content})}\n\n"
+
+            if not tokens_yielded and specialist_final_content:
+                yield f"data: {json.dumps({'type': 'token', 'content': specialist_final_content})}\n\n"
+
+            yield f"data: {json.dumps({'type': 'done', 'role': profile['role'], 'user_bu': profile['user_bu'], 'timestamp': datetime.now().isoformat(), 'tools_used': tools_used, 'data_sources': data_sources})}\n\n"
+
+        except Exception as e:
+            logger.error(f"Stream error: {e}", exc_info=True)
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 

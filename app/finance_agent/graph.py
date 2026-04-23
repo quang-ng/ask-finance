@@ -21,14 +21,17 @@ AGENT_NAMES = ["qa_agent", "analytics_agent", "report_agent"]
 
 # ── Supervisor ──────────────────────────────────────────────────────────────
 
-def supervisor_node(state: State, config: RunnableConfig) -> dict:
+async def supervisor_node(state: State, config: RunnableConfig) -> dict:
     cfg = Configuration.from_runnable_config(config)
     llm = load_chat_model(cfg.model)
 
     system = get_system_prompt(SUPERVISOR_PROMPT)
     messages = [SystemMessage(content=system)] + state["messages"]
 
-    response = llm.invoke(messages)
+    response = None
+    async for chunk in llm.astream(messages):
+        response = chunk if response is None else response + chunk
+
     return {"messages": [response], "active_agent": "supervisor"}
 
 
@@ -54,14 +57,14 @@ def route_supervisor(state: State) -> Literal["qa_agent", "analytics_agent", "re
 def _make_agent_node(system_prompt_template: str, tools: list):
     tool_names = [t.name for t in tools]
 
-    def agent_node(state: State, config: RunnableConfig) -> dict:
+    async def agent_node(state: State, config: RunnableConfig) -> dict:
         cfg = Configuration.from_runnable_config(config)
         llm = load_chat_model(cfg.model).bind_tools(tools)
 
         system = get_system_prompt(system_prompt_template)
         messages = [SystemMessage(content=system)] + state["messages"]
 
-        response = llm.invoke(messages)
+        response = await llm.ainvoke(messages)
         return {"messages": [response]}
 
     def route_agent(state: State) -> Literal["tools", "supervisor"]:
