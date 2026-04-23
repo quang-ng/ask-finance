@@ -3,7 +3,8 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+import pandas as pd
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -59,6 +60,8 @@ class ChatResponse(BaseModel):
     role: str
     user_bu: str
     timestamp: str
+    tools_used: list[str] = []
+    data_sources: list[str] = []
 
 
 @app.get("/")
@@ -91,11 +94,32 @@ async def chat(request: ChatRequest):
         answer = ""
         for msg in reversed(result.get("messages", [])):
             if isinstance(msg, AIMessage) and msg.content and not msg.tool_calls:
-                answer = msg.content
+                content = msg.content
+                if isinstance(content, list):
+                    # Content blocks: [{'type': 'text', 'text': '...'}, ...]
+                    content = "".join(
+                        block.get("text", "") if isinstance(block, dict) else str(block)
+                        for block in content
+                    )
+                answer = content
                 break
 
         if not answer:
             answer = "I was unable to generate an answer. Please try rephrasing your question."
+
+        # Collect which tools were called and which data types were accessed
+        tools_used: list[str] = []
+        data_sources: list[str] = []
+        for msg in result.get("messages", []):
+            if isinstance(msg, AIMessage) and msg.tool_calls:
+                for tc in msg.tool_calls:
+                    name = tc.get("name", "")
+                    if name and name not in tools_used:
+                        tools_used.append(name)
+                    if name in ("retrieve_financial_data", "summarize_financial_data"):
+                        dt = tc.get("args", {}).get("data_type", "")
+                        if dt and dt not in data_sources:
+                            data_sources.append(dt.upper())
 
     except Exception as e:
         logger.error(f"Agent error: {e}", exc_info=True)
@@ -106,7 +130,64 @@ async def chat(request: ChatRequest):
         role=profile["role"],
         user_bu=profile["user_bu"],
         timestamp=datetime.now().isoformat(),
+        tools_used=tools_used,
+        data_sources=data_sources,
     )
+
+
+@app.get("/dashboard")
+async def dashboard(user: str = Query("alice")):
+    profile = ROLE_PROFILES.get(user, ROLE_PROFILES["alice"])
+    user_bu = profile["user_bu"]
+    user_region = profile["user_region"]
+
+    pl = pd.read_csv("data/pl_report.csv")
+    opex_df = pd.read_csv("data/opex_detail.csv")
+
+    if user_bu != "All":
+        pl = pl[pl["business_unit"] == user_bu]
+        opex_df = opex_df[opex_df["business_unit"] == user_bu]
+    if user_region != "All":
+        pl = pl[pl["region"] == user_region]
+        opex_df = opex_df[opex_df["region"] == user_region]
+
+    periods = sorted(pl["period"].unique())
+    latest, prev = periods[-1], periods[-2]
+
+    def agg(df, period, col):
+        return float(df[df["period"] == period][col].sum())
+
+    def pct(curr, prior):
+        return round((curr - prior) / prior * 100, 1) if prior else 0.0
+
+    rev_l, rev_p     = agg(pl, latest, "revenue"),    agg(pl, prev, "revenue")
+    ebit_l, ebit_p   = agg(pl, latest, "ebit"),       agg(pl, prev, "ebit")
+    opex_l, opex_p   = agg(pl, latest, "opex"),       agg(pl, prev, "opex")
+    ni_l, ni_p       = agg(pl, latest, "net_income"),  agg(pl, prev, "net_income")
+
+    opex_latest = opex_df[opex_df["period"] == latest]
+
+    return {
+        "latest_period": latest,
+        "prev_period": prev,
+        "kpis": {
+            "revenue":    {"value": round(rev_l  / 1e6, 2), "change": pct(rev_l,  rev_p)},
+            "ebit":       {"value": round(ebit_l / 1e6, 2), "change": pct(ebit_l, ebit_p)},
+            "opex":       {"value": round(opex_l / 1e6, 2), "change": pct(opex_l, opex_p)},
+            "net_income": {"value": round(ni_l   / 1e6, 2), "change": pct(ni_l,   ni_p)},
+        },
+        "ebit_trend": [
+            {"period": p, "ebit": round(agg(pl, p, "ebit") / 1e6, 2)}
+            for p in periods
+        ],
+        "opex_breakdown": {
+            "Headcount": round(float(opex_latest["headcount"].sum()) / 1e6, 2),
+            "Marketing": round(float(opex_latest["marketing"].sum())  / 1e6, 2),
+            "IT":        round(float(opex_latest["it"].sum())         / 1e6, 2),
+            "Travel":    round(float(opex_latest["travel"].sum())     / 1e6, 2),
+            "Other":     round(float(opex_latest["other"].sum())      / 1e6, 2),
+        },
+    }
 
 
 @app.get("/health")

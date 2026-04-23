@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ask Finance</title>
   <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -23,6 +24,7 @@
       display: flex;
       align-items: center;
       gap: 16px;
+      flex-shrink: 0;
     }
 
     header h1 { font-size: 18px; font-weight: 600; }
@@ -44,6 +46,109 @@
       padding: 6px 10px;
       font-size: 13px;
       cursor: pointer;
+    }
+
+    /* ── App body ── */
+    .app-body {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 260px;
+      background: #16213a;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid #253563;
+    }
+
+    #new-chat-btn {
+      width: 100%;
+      background: #253563;
+      color: white;
+      border: 1px solid #3d5099;
+      border-radius: 8px;
+      padding: 9px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #new-chat-btn:hover { background: #2e4080; }
+
+    #new-chat-btn::before {
+      content: "+";
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .sidebar-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+
+    .sidebar-list::-webkit-scrollbar { width: 4px; }
+    .sidebar-list::-webkit-scrollbar-track { background: transparent; }
+    .sidebar-list::-webkit-scrollbar-thumb { background: #3d5099; border-radius: 4px; }
+
+    .sidebar-section-label {
+      font-size: 11px;
+      color: #6b80b0;
+      padding: 10px 16px 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    .history-item {
+      padding: 9px 16px;
+      cursor: pointer;
+      border-radius: 6px;
+      margin: 1px 8px;
+      position: relative;
+    }
+
+    .history-item:hover { background: #1e3060; }
+    .history-item.active { background: #253563; }
+
+    .history-item-title {
+      font-size: 13px;
+      color: #d0d8f0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-item-meta {
+      font-size: 11px;
+      color: #6b80b0;
+      margin-top: 2px;
+    }
+
+    .history-empty {
+      padding: 24px 16px;
+      font-size: 13px;
+      color: #4a5a80;
+      text-align: center;
+    }
+
+    /* ── Main chat area ── */
+    .main-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
 
     #chat-container {
@@ -120,6 +225,7 @@
       padding: 14px 18px;
       align-self: flex-start;
       display: none;
+      margin: 0 24px 8px;
     }
 
     .typing-indicator span {
@@ -145,6 +251,7 @@
       padding: 16px 24px;
       display: flex;
       gap: 10px;
+      flex-shrink: 0;
     }
 
     #question-input {
@@ -203,6 +310,121 @@
 
     .welcome h2 { font-size: 22px; color: #1a2744; margin-bottom: 8px; }
     .welcome p { font-size: 14px; margin-bottom: 16px; }
+
+    /* ── Dashboard ── */
+    #dashboard-bar {
+      background: #f0f4ff;
+      border-bottom: 1px solid #dce4f5;
+      padding: 7px 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    #dashboard-bar:hover { background: #e6ecff; }
+
+    .dash-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1a2744;
+    }
+
+    #dash-period {
+      font-size: 11px;
+      color: #5a70a0;
+      background: #dce4f5;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    #dash-chevron {
+      margin-left: auto;
+      font-size: 11px;
+      color: #5a70a0;
+      transition: transform 0.3s ease;
+    }
+
+    #dash-chevron.open { transform: rotate(180deg); }
+
+    #dashboard-panel {
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.35s ease;
+      background: white;
+      border-bottom: 1px solid #e0e0e0;
+      flex-shrink: 0;
+    }
+
+    #dashboard-panel.open { max-height: 340px; }
+
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      padding: 14px 24px 10px;
+    }
+
+    .kpi-card {
+      background: #f8faff;
+      border: 1px solid #dce4f5;
+      border-radius: 8px;
+      padding: 10px 14px;
+    }
+
+    .kpi-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #7a8aaa;
+      margin-bottom: 4px;
+    }
+
+    .kpi-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1a2744;
+      line-height: 1.2;
+    }
+
+    .kpi-change {
+      font-size: 11px;
+      margin-top: 3px;
+    }
+
+    .kpi-change.up   { color: #16a34a; }
+    .kpi-change.down { color: #dc2626; }
+    .kpi-change.neutral { color: #888; }
+
+    .charts-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 0 24px 14px;
+    }
+
+    .chart-box {
+      background: #f8faff;
+      border: 1px solid #dce4f5;
+      border-radius: 8px;
+      padding: 10px 14px;
+    }
+
+    .chart-box-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: #5a70a0;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .chart-canvas-wrap {
+      position: relative;
+      height: 140px;
+    }
   </style>
 </head>
 <body>
@@ -219,28 +441,88 @@
     </div>
   </header>
 
-  <div id="chat-container">
-    <div class="welcome">
-      <h2>Finance Business Partner AI</h2>
-      <p>Ask questions about P&amp;L, Opex, EBIT trends, project ROI, and finance policies.</p>
-      <div class="example-questions">
-        <button class="example-btn" onclick="setQuestion(this.textContent)">What was Electronics EBIT in Q2 2023?</button>
-        <button class="example-btn" onclick="setQuestion(this.textContent)">Show me the EBIT trend for 2023</button>
-        <button class="example-btn" onclick="setQuestion(this.textContent)">Compare Q2 vs Q1 Opex variance for Electronics</button>
-        <button class="example-btn" onclick="setQuestion(this.textContent)">What is EBIT margin and how is it calculated?</button>
-        <button class="example-btn" onclick="setQuestion(this.textContent)">Show me all project ROI data</button>
-        <button class="example-btn" onclick="setQuestion(this.textContent)">What is the Opex variance policy?</button>
+  <!-- Dashboard toggle bar -->
+  <div id="dashboard-bar" onclick="toggleDashboard()">
+    <span class="dash-title">Dashboard</span>
+    <span id="dash-period">—</span>
+    <span id="dash-chevron">&#9660;</span>
+  </div>
+
+  <!-- Dashboard panel -->
+  <div id="dashboard-panel">
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-label">Revenue</div>
+        <div class="kpi-value" id="kpi-revenue">—</div>
+        <div class="kpi-change neutral" id="kpi-revenue-chg">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">EBIT</div>
+        <div class="kpi-value" id="kpi-ebit">—</div>
+        <div class="kpi-change neutral" id="kpi-ebit-chg">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Opex</div>
+        <div class="kpi-value" id="kpi-opex">—</div>
+        <div class="kpi-change neutral" id="kpi-opex-chg">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Net Income</div>
+        <div class="kpi-value" id="kpi-net-income">—</div>
+        <div class="kpi-change neutral" id="kpi-net-income-chg">—</div>
+      </div>
+    </div>
+    <div class="charts-row">
+      <div class="chart-box">
+        <div class="chart-box-title">EBIT by Quarter</div>
+        <div class="chart-canvas-wrap">
+          <canvas id="chart-ebit-trend"></canvas>
+        </div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-box-title">Opex Breakdown</div>
+        <div class="chart-canvas-wrap">
+          <canvas id="chart-opex-breakdown"></canvas>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="typing-indicator" id="typing">
-    <span></span><span></span><span></span>
-  </div>
+  <div class="app-body">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <button id="new-chat-btn">New Chat</button>
+      </div>
+      <div class="sidebar-list" id="history-list"></div>
+    </div>
 
-  <div id="input-area">
-    <textarea id="question-input" placeholder="Ask a finance question..." rows="1"></textarea>
-    <button id="send-btn" onclick="sendMessage()">Send</button>
+    <!-- Main chat -->
+    <div class="main-area">
+      <div id="chat-container">
+        <div class="welcome" id="welcome-msg">
+          <h2>Finance Business Partner AI</h2>
+          <p>Ask questions about P&amp;L, Opex, EBIT trends, project ROI, and finance policies.</p>
+          <div class="example-questions">
+            <button class="example-btn" onclick="setQuestion(this.textContent)">What was Electronics EBIT in Q2 2023?</button>
+            <button class="example-btn" onclick="setQuestion(this.textContent)">Show me the EBIT trend for 2023</button>
+            <button class="example-btn" onclick="setQuestion(this.textContent)">Compare Q2 vs Q1 Opex variance for Electronics</button>
+            <button class="example-btn" onclick="setQuestion(this.textContent)">What is EBIT margin and how is it calculated?</button>
+            <button class="example-btn" onclick="setQuestion(this.textContent)">Show me all project ROI data</button>
+            <button class="example-btn" onclick="setQuestion(this.textContent)">What is the Opex variance policy?</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="typing-indicator" id="typing">
+        <span></span><span></span><span></span>
+      </div>
+
+      <div id="input-area">
+        <textarea id="question-input" placeholder="Ask a finance question..." rows="1"></textarea>
+        <button id="send-btn" onclick="sendMessage()">Send</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -250,23 +532,144 @@
     const sendBtn = document.getElementById('send-btn');
     const chatContainer = document.getElementById('chat-container');
     const typing = document.getElementById('typing');
+    const historyList = document.getElementById('history-list');
 
-    // Stable thread_id per browser session — persists conversation history in Postgres
-    function getThreadId() {
-      let id = sessionStorage.getItem('ask_finance_thread_id');
-      if (!id) {
-        id = (crypto.randomUUID ?? (() => ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c => (c^(crypto.getRandomValues(new Uint8Array(1))[0]&(15>>c/4))).toString(16))))();
-        sessionStorage.setItem('ask_finance_thread_id', id);
-      }
-      return id;
+    // ── History storage (localStorage) ──────────────────────────────────────
+
+    function storageKey(user) {
+      return `ask_finance_history_${user}`;
     }
 
-    // Reset thread on user switch so different roles start fresh conversations
-    document.getElementById('user-select').addEventListener('change', () => {
-      sessionStorage.removeItem('ask_finance_thread_id');
+    function loadHistory(user) {
+      try {
+        return JSON.parse(localStorage.getItem(storageKey(user)) || '[]');
+      } catch { return []; }
+    }
+
+    function saveHistory(user, history) {
+      localStorage.setItem(storageKey(user), JSON.stringify(history));
+    }
+
+    function getConversation(user, threadId) {
+      return loadHistory(user).find(c => c.thread_id === threadId) || null;
+    }
+
+    function upsertConversation(user, conv) {
+      const history = loadHistory(user);
+      const idx = history.findIndex(c => c.thread_id === conv.thread_id);
+      if (idx >= 0) history[idx] = conv;
+      else history.unshift(conv);
+      saveHistory(user, history);
+    }
+
+    // ── Active thread state ──────────────────────────────────────────────────
+
+    let activeThreadId = null;
+
+    function generateUUID() {
+      return (crypto.randomUUID?.bind(crypto) ??
+        (() => ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+          (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> c / 4))).toString(16)
+        )))();
+    }
+
+    function currentUser() {
+      return document.getElementById('user-select').value;
+    }
+
+    function startNewThread() {
+      activeThreadId = generateUUID();
+      return activeThreadId;
+    }
+
+    // ── Sidebar rendering ────────────────────────────────────────────────────
+
+    function formatRelativeTime(isoString) {
+      const date = new Date(isoString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+      if (diffMins < 1) return 'Just now';
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays < 7) return `${diffDays}d ago`;
+      return date.toLocaleDateString();
+    }
+
+    function renderSidebar() {
+      const user = currentUser();
+      const history = loadHistory(user);
+      historyList.innerHTML = '';
+
+      if (history.length === 0) {
+        historyList.innerHTML = '<div class="history-empty">No conversations yet</div>';
+        return;
+      }
+
+      historyList.innerHTML = '<div class="sidebar-section-label">Recent</div>';
+
+      history.forEach(conv => {
+        const item = document.createElement('div');
+        item.className = 'history-item' + (conv.thread_id === activeThreadId ? ' active' : '');
+        item.dataset.threadId = conv.thread_id;
+        item.innerHTML = `
+          <div class="history-item-title">${escapeHtml(conv.title)}</div>
+          <div class="history-item-meta">${formatRelativeTime(conv.updated_at)}</div>
+        `;
+        item.addEventListener('click', () => loadConversation(conv.thread_id));
+        historyList.appendChild(item);
+      });
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function setActiveSidebarItem(threadId) {
+      historyList.querySelectorAll('.history-item').forEach(el => {
+        el.classList.toggle('active', el.dataset.threadId === threadId);
+      });
+    }
+
+    // ── Load a past conversation ─────────────────────────────────────────────
+
+    async function loadConversation(threadId) {
+      const user = currentUser();
+      const conv = getConversation(user, threadId);
+      if (!conv) return;
+
+      activeThreadId = threadId;
+      clearChat();
+
+      for (const msg of conv.messages) {
+        if (msg.role === 'user') {
+          appendMessage('user', msg.text);
+        } else {
+          await appendAssistantMessage(msg.text, msg.role_label, msg.user_bu, msg.tools_used || [], msg.data_sources || []);
+        }
+      }
+
+      setActiveSidebarItem(threadId);
+    }
+
+    // ── New chat ─────────────────────────────────────────────────────────────
+
+    document.getElementById('new-chat-btn').addEventListener('click', () => {
+      startNewThread();
+      clearChat();
+      showWelcome();
+      setActiveSidebarItem(null);
+    });
+
+    function clearChat() {
       chatContainer.innerHTML = '';
+    }
+
+    function showWelcome() {
       chatContainer.innerHTML = `
-        <div class="welcome">
+        <div class="welcome" id="welcome-msg">
           <h2>Finance Business Partner AI</h2>
           <p>Ask questions about P&amp;L, Opex, EBIT trends, project ROI, and finance policies.</p>
           <div class="example-questions">
@@ -278,7 +681,19 @@
             <button class="example-btn" onclick="setQuestion(this.textContent)">What is the Opex variance policy?</button>
           </div>
         </div>`;
+    }
+
+    // ── User switch ───────────────────────────────────────────────────────────
+
+    document.getElementById('user-select').addEventListener('change', () => {
+      startNewThread();
+      clearChat();
+      showWelcome();
+      renderSidebar();
+      if (dashOpen) loadDashboard();
     });
+
+    // ── Input handling ────────────────────────────────────────────────────────
 
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -290,28 +705,50 @@
     function setQuestion(text) {
       input.value = text;
       input.focus();
-      // Remove welcome message on first interaction
-      const welcome = document.querySelector('.welcome');
+      const welcome = document.getElementById('welcome-msg');
       if (welcome) welcome.remove();
     }
+
+    // ── Send message ──────────────────────────────────────────────────────────
 
     async function sendMessage() {
       const question = input.value.trim();
       if (!question) return;
 
-      const user = document.getElementById('user-select').value;
+      const user = currentUser();
 
-      // Remove welcome if still present
-      const welcome = document.querySelector('.welcome');
+      const welcome = document.getElementById('welcome-msg');
       if (welcome) welcome.remove();
 
-      // Append user message
+      // Ensure we have an active thread
+      if (!activeThreadId) startNewThread();
+
+      const threadId = activeThreadId;
+      const isNewConversation = !getConversation(user, threadId);
+
+      // Create the conversation entry on the first message
+      if (isNewConversation) {
+        const now = new Date().toISOString();
+        upsertConversation(user, {
+          thread_id: threadId,
+          title: question.length > 60 ? question.slice(0, 57) + '…' : question,
+          created_at: now,
+          updated_at: now,
+          messages: [],
+        });
+        renderSidebar();
+      }
+
       appendMessage('user', question);
       input.value = '';
       sendBtn.disabled = true;
 
-      // Show typing indicator
-      chatContainer.appendChild(typing);
+      // Persist user message
+      const conv = getConversation(user, threadId);
+      conv.messages.push({ role: 'user', text: question });
+      conv.updated_at = new Date().toISOString();
+      upsertConversation(user, conv);
+
       typing.style.display = 'block';
       chatContainer.scrollTop = chatContainer.scrollHeight;
 
@@ -319,7 +756,7 @@
         const res = await fetch('/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user, question, thread_id: getThreadId() }),
+          body: JSON.stringify({ user, question, thread_id: threadId }),
         });
 
         if (!res.ok) {
@@ -329,7 +766,22 @@
 
         const data = await res.json();
         typing.style.display = 'none';
-        await appendAssistantMessage(data.answer, data.role, data.user_bu);
+        await appendAssistantMessage(data.answer, data.role, data.user_bu, data.tools_used, data.data_sources);
+
+        // Persist assistant message
+        const updatedConv = getConversation(user, threadId);
+        updatedConv.messages.push({
+          role: 'assistant',
+          text: data.answer,
+          role_label: data.role,
+          user_bu: data.user_bu,
+          tools_used: data.tools_used || [],
+          data_sources: data.data_sources || [],
+        });
+        updatedConv.updated_at = new Date().toISOString();
+        upsertConversation(user, updatedConv);
+        renderSidebar();
+        setActiveSidebarItem(threadId);
 
       } catch (err) {
         typing.style.display = 'none';
@@ -340,6 +792,8 @@
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
+    // ── Message rendering ─────────────────────────────────────────────────────
+
     function appendMessage(role, text) {
       const div = document.createElement('div');
       div.className = `message ${role}`;
@@ -348,11 +802,10 @@
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
-    async function appendAssistantMessage(text, role, userBu) {
+    async function appendAssistantMessage(text, role, userBu, toolsUsed = [], dataSources = []) {
       const wrapper = document.createElement('div');
       wrapper.className = 'message assistant';
 
-      // Split on mermaid code fences
       const parts = text.split(/(```mermaid[\s\S]*?```)/g);
 
       for (const part of parts) {
@@ -363,7 +816,6 @@
           chartDiv.textContent = code;
           wrapper.appendChild(chartDiv);
         } else if (part.trim()) {
-          // Render markdown-style tables as HTML
           const p = document.createElement('p');
           p.style.whiteSpace = 'pre-wrap';
           p.textContent = part.trim();
@@ -373,12 +825,16 @@
 
       const meta = document.createElement('div');
       meta.className = 'meta';
-      meta.textContent = `${role.replace('_', ' ').toUpperCase()} · ${userBu}`;
+      const roleLabel = role.replace('_', ' ').toUpperCase();
+      const buLabel = userBu || 'All';
+      const sourceParts = [];
+      if (dataSources && dataSources.length) sourceParts.push(`Source: ${dataSources.join(', ')}`);
+      if (toolsUsed && toolsUsed.length) sourceParts.push(`Tools: ${toolsUsed.join(', ')}`);
+      meta.textContent = [roleLabel + ' · ' + buLabel, ...sourceParts].join(' · ');
       wrapper.appendChild(meta);
 
       chatContainer.appendChild(wrapper);
 
-      // Render all mermaid charts in this message
       const charts = wrapper.querySelectorAll('.mermaid');
       if (charts.length > 0) {
         try {
@@ -390,6 +846,145 @@
 
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
+
+    // ── Dashboard ─────────────────────────────────────────────────────────────
+
+    let chartEbit = null;
+    let chartOpex = null;
+    let dashOpen = false;
+
+    function toggleDashboard() {
+      const panel = document.getElementById('dashboard-panel');
+      const chevron = document.getElementById('dash-chevron');
+      dashOpen = !dashOpen;
+      panel.classList.toggle('open', dashOpen);
+      chevron.classList.toggle('open', dashOpen);
+      if (dashOpen) loadDashboard();
+    }
+
+    function fmtM(val) {
+      return `$${val.toFixed(1)}M`;
+    }
+
+    function fmtChange(chg) {
+      const arrow = chg > 0 ? '▲' : chg < 0 ? '▼' : '—';
+      const cls   = chg > 0 ? 'up' : chg < 0 ? 'down' : 'neutral';
+      return { text: `${arrow} ${Math.abs(chg)}% vs prior period`, cls };
+    }
+
+    async function loadDashboard() {
+      const user = currentUser();
+      try {
+        const res  = await fetch(`/dashboard?user=${user}`);
+        const data = await res.json();
+
+        document.getElementById('dash-period').textContent = data.latest_period;
+
+        const kpis = [
+          ['revenue',    'kpi-revenue',    'kpi-revenue-chg'],
+          ['ebit',       'kpi-ebit',       'kpi-ebit-chg'],
+          ['opex',       'kpi-opex',       'kpi-opex-chg'],
+          ['net_income', 'kpi-net-income', 'kpi-net-income-chg'],
+        ];
+
+        kpis.forEach(([key, valId, chgId]) => {
+          const { value, change } = data.kpis[key];
+          document.getElementById(valId).textContent = fmtM(value);
+          const { text, cls } = fmtChange(change);
+          const el = document.getElementById(chgId);
+          el.textContent = text;
+          el.className = `kpi-change ${cls}`;
+        });
+
+        renderCharts(data.ebit_trend, data.opex_breakdown);
+      } catch (e) {
+        console.warn('Dashboard load error:', e);
+      }
+    }
+
+    function renderCharts(trend, breakdown) {
+      if (chartEbit) chartEbit.destroy();
+      if (chartOpex) chartOpex.destroy();
+
+      const labels = trend.map(t => t.period.replace('2023-', '').replace('Q', 'Q') + "-23");
+
+      chartEbit = new Chart(
+        document.getElementById('chart-ebit-trend'),
+        {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [{
+              data: trend.map(t => t.ebit),
+              backgroundColor: '#3b82f6',
+              borderRadius: 4,
+              borderSkipped: false,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: { callbacks: { label: ctx => ` $${ctx.raw}M` } },
+            },
+            scales: {
+              y: {
+                beginAtZero: false,
+                ticks: { callback: v => `$${v}M`, font: { size: 10 } },
+                grid: { color: '#eef0f8' },
+              },
+              x: {
+                ticks: { font: { size: 10 } },
+                grid: { display: false },
+              },
+            },
+          },
+        }
+      );
+
+      chartOpex = new Chart(
+        document.getElementById('chart-opex-breakdown'),
+        {
+          type: 'doughnut',
+          data: {
+            labels: Object.keys(breakdown),
+            datasets: [{
+              data: Object.values(breakdown),
+              backgroundColor: ['#3b82f6', '#8b5cf6', '#06b6d4', '#f59e0b', '#6b7280'],
+              borderWidth: 0,
+              hoverOffset: 4,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'right',
+                labels: { font: { size: 10 }, boxWidth: 10, padding: 6 },
+              },
+              tooltip: {
+                callbacks: {
+                  label: ctx => {
+                    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                    const pct   = ((ctx.raw / total) * 100).toFixed(0);
+                    return ` $${ctx.raw}M (${pct}%)`;
+                  },
+                },
+              },
+            },
+          },
+        }
+      );
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+
+    startNewThread();
+    renderSidebar();
+    // Open dashboard by default
+    toggleDashboard();
   </script>
 </body>
 </html>

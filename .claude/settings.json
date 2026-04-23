@@ -5,7 +5,8 @@
       "Bash(.venv/bin/pip install *)",
       "Bash(.venv/bin/python -c \"from app.finance_agent.graph import graph; print\\('Graph compiled OK'\\)\")",
       "Bash(.venv/bin/python -c \"from app.knowledge.vector_store import init_vector_store, search_knowledge; print\\('vector_store OK'\\)\")",
-      "Bash(.venv/bin/python -c \"from app.finance_agent.graph import build_graph; print\\('OK'\\)\")"
+      "Bash(.venv/bin/python -c \"from app.finance_agent.graph import build_graph; print\\('OK'\\)\")",
+      "Bash(python -c ' *)"
     ]
   }
 }

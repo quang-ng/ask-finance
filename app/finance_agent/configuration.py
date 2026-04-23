@@ -6,7 +6,7 @@ from langchain_core.runnables import RunnableConfig
 @dataclass(kw_only=True)
 class Configuration:
     model: Annotated[str, {"__template_metadata__": {"kind": "llm"}}] = field(
-        default="gemini-2.0-flash",
+        default="gemini-3.1-pro-preview",
         metadata={"description": "The Gemini model to use"},
     )
     role: str = field(
@@ -30,7 +30,7 @@ class Configuration:
     def from_runnable_config(cls, config: Optional[RunnableConfig] = None) -> "Configuration":
         configurable = (config or {}).get("configurable", {})
         return cls(
-            model=configurable.get("model", "gemini-2.0-flash"),
+            model=configurable.get("model", "gemini-2.5-pro"),
             role=configurable.get("role", "analyst"),
             user_bu=configurable.get("user_bu", "Electronics"),
             user_region=configurable.get("user_region", "Asia"),
