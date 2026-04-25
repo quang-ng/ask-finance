@@ -397,6 +397,10 @@
       50% { opacity: 0; }
     }
 
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
     #input-area {
       background: white;
       border-top: 1px solid #e0e0e0;
@@ -925,6 +929,8 @@
         let textContainer = null;
         let streamText = '';
         let doneData = null;
+        let activeTools = new Set();
+        let toolStatusEl = null;
 
         function ensureStreamWrapper() {
           if (!streamWrapper) {
@@ -937,6 +943,26 @@
             streamWrapper.appendChild(toolsContainer);
             streamWrapper.appendChild(textContainer);
             chatContainer.appendChild(streamWrapper);
+          }
+        }
+
+        function updateToolStatus() {
+          if (!toolsContainer) return;
+
+          if (activeTools.size > 0) {
+            if (!toolStatusEl) {
+              toolStatusEl = document.createElement('div');
+              toolStatusEl.style.cssText = 'padding: 8px 12px; background: #f0f4ff; border-radius: 4px; font-size: 13px; color: #5a70a0; margin-bottom: 8px; display: flex; gap: 6px; align-items: center;';
+            }
+            const toolsList = Array.from(activeTools).join(', ');
+            toolStatusEl.innerHTML = `<span style="animation: spin 1s linear infinite;">⚙️</span> Using: <strong>${toolsList}</strong>`;
+            if (!toolStatusEl.parentElement) {
+              toolsContainer.insertBefore(toolStatusEl, toolsContainer.firstChild);
+            }
+            typingStatus.textContent = '';
+          } else if (toolStatusEl && toolStatusEl.parentElement) {
+            toolStatusEl.remove();
+            toolStatusEl = null;
           }
         }
 
@@ -955,16 +981,27 @@
             if (evt.type === 'token') {
               ensureStreamWrapper();
               streamText += evt.content;
-              textContainer.textContent = streamText;
+              textContainer.innerHTML = marked.parse(streamText);
               chatContainer.scrollTop = chatContainer.scrollHeight;
 
             } else if (evt.type === 'tool_result') {
               ensureStreamWrapper();
+              if (evt.name && activeTools.has(evt.name)) {
+                activeTools.delete(evt.name);
+              }
               toolsContainer.appendChild(createToolCard(evt.name, evt.content));
+              updateToolStatus();
               chatContainer.scrollTop = chatContainer.scrollHeight;
 
             } else if (evt.type === 'status') {
-              typingStatus.textContent = evt.message;
+              ensureStreamWrapper();
+              const toolMatch = evt.message.match(/Using\s+(.+?)…/);
+              if (toolMatch) {
+                activeTools.add(toolMatch[1]);
+                updateToolStatus();
+              } else {
+                typingStatus.textContent = evt.message;
+              }
 
             } else if (evt.type === 'done') {
               doneData = evt;
@@ -979,8 +1016,42 @@
 
         if (streamWrapper) {
           streamWrapper.classList.remove('streaming');
-          textContainer.innerHTML = '';
-          await renderAssistantContent(streamWrapper, streamText, doneData || {}, textContainer);
+          const meta = doneData || {};
+
+          const mermaidRegex = /```mermaid[\s\S]*?```/g;
+          const hasMermaid = mermaidRegex.test(streamText);
+
+          if (hasMermaid) {
+            const mermaidBlocks = streamText.match(/```mermaid[\s\S]*?```/g) || [];
+            for (const block of mermaidBlocks) {
+              const code = block.replace(/^```mermaid\n?/, '').replace(/```$/, '').trim();
+              const chartDiv = document.createElement('div');
+              chartDiv.className = 'mermaid';
+              chartDiv.textContent = code;
+              streamWrapper.appendChild(chartDiv);
+            }
+          }
+
+          if (meta.role) {
+            const metaDiv = document.createElement('div');
+            metaDiv.className = 'meta';
+            const roleLabel = meta.role.replace('_', ' ').toUpperCase();
+            const buLabel = meta.user_bu || 'All';
+            const sourceParts = [];
+            if (meta.data_sources?.length) sourceParts.push(`Source: ${meta.data_sources.join(', ')}`);
+            if (meta.tools_used?.length) sourceParts.push(`Tools: ${meta.tools_used.join(', ')}`);
+            metaDiv.textContent = [roleLabel + ' · ' + buLabel, ...sourceParts].join(' · ');
+            streamWrapper.appendChild(metaDiv);
+          }
+
+          const charts = streamWrapper.querySelectorAll('.mermaid');
+          if (charts.length > 0) {
+            try {
+              await mermaid.run({ nodes: Array.from(charts) });
+            } catch (e) {
+              console.warn('Mermaid render error:', e);
+            }
+          }
         }
 
         const finalData = doneData || {};
