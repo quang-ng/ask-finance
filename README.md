@@ -228,6 +228,353 @@ python main.py
 
 ---
 
+## Demo & Features Showcase
+
+This section walks through a complete 20-minute live demo of Ask Finance, showing each capability with real screenshots. Follow along to see how the system handles everything from simple data retrieval to complex role-based access control and report generation.
+
+---
+
+### 📊 Scenario 1: Role-Based Dashboard & Data Ingestion
+
+**The Challenge**: Different users should see different data based on their role and permissions.
+
+When you open Ask Finance, you select your role from a dropdown. The dashboard immediately updates to show only data you're authorized to see.
+
+#### Alice's View — Analyst (Electronics BU, Asia region only)
+Alice is a business analyst with limited access. She sees only her metrics:
+
+![Alice's Dashboard](demo_screenshots/s1_02_alice_dashboard.png)
+
+**What Alice sees:**
+- Revenue: $15M (Asia only)
+- EBIT: $4.2M (Asia only)
+- Opex: $2.3M (Asia only)
+- Net Income: $2.1M (Asia only)
+
+**How it works**: Behind the scenes, when Alice logs in, the system checks her role from a permission matrix. The data loading function filters the CSV to show **only Electronics + Asia rows**. She literally cannot see Consumer Goods or other regions, even if she tries to ask for it. This is RBAC enforced at the **data layer**, not the UI layer.
+
+---
+
+#### Bob's View — BU General Manager (Electronics BU, all regions)
+Bob is a Business Unit General Manager. He has broader access:
+
+![Bob's Dashboard](demo_screenshots/s1_03_bob_dashboard.png)
+
+**What Bob sees:**
+- Same metrics as Alice, but aggregated across **all regions** (Asia, Europe, Americas)
+- Total Electronics Revenue: ~$31M (3x Alice's view)
+- Full regional breakdown available by region
+
+**How it works**: Bob's role allows him to see all regions within Electronics, but not other business units. The dashboard dynamically sums metrics across Asia + Europe + Americas. If Bob asks the same questions as Alice, he'll get larger numbers because his data isn't filtered by region — only by BU. This is role-based filtering at work.
+
+---
+
+#### David's View — Group CFO (all business units, all regions)
+David is the Group CFO with complete visibility:
+
+![David's Dashboard](demo_screenshots/s1_04_david_dashboard.png)
+
+**What David sees:**
+- All business units (Electronics AND Consumer Goods)
+- All regions (Asia, Europe, Americas)
+- Complete corporate overview
+- Cross-BU comparisons
+
+**How it works**: David's role has no restrictions. When he queries, the system loads all rows from the CSV without applying any BU or region filters. He sees the full financial picture. This illustrates the fundamental RBAC principle: **data filtering happens at the layer closest to the data source** — the `retrieve_financial_data()` tool checks his role first, then returns only allowed rows. The LLM never sees unauthorized data.
+
+---
+
+### 💬 Scenario 2: Natural Language Q&A with Exact Data Retrieval
+
+**The Power**: Instead of SQL queries or Excel, users ask questions in plain English.
+
+#### Query: "What was Electronics Opex in Q2?"
+
+![OPEX Query](demo_screenshots/s2_01_opex_query.png)
+
+**What happens behind the scenes:**
+1. User asks in natural language: "What was Electronics Opex in Q2?"
+2. Supervisor Agent reads the question and routes to the **Q&A Agent** (because it's a data retrieval question)
+3. Q&A Agent calls `retrieve_financial_data("OPEX")` 
+4. The tool checks user's role and applies RBAC filters:
+   - If Alice: only Electronics + Asia → returns $2.3M
+   - If Bob: only Electronics + all regions → returns $5.8M  
+   - If David: all data → returns $7.2M (across all regions + BUs if asking globally)
+5. Result is returned with **source attribution** (period: Q2 2023, BU: Electronics, Region: Asia for Alice)
+
+**Why this matters**: Each user gets the correct answer for their permission scope. Alice can't accidentally see Consumer Goods data. Bob can't access unlisted BUs. Auditing is built-in — every number has a source trail.
+
+---
+
+### 📈 Scenario 3: Trend Analysis with Automatic Visualization
+
+**The Intelligence**: For multi-period questions, the system calculates trends and generates charts.
+
+#### Query: "What's the EBIT trend for Electronics?"
+
+![Trend Analysis](demo_screenshots/s2_02_trend_analysis.png)
+
+**What the response includes:**
+- Quarterly EBIT progression (Q1: $6.2M → Q4: $8.1M)
+- Growth percentages calculated per quarter (+6.5%, +9.1%, +12.5%)
+- Total FY2023 growth: +30.6%
+- **Mermaid chart** rendered inline showing the trend line
+
+**How the agent works:**
+1. Supervisor routes to **Analytics Agent** (because it detects a trend question)
+2. Analytics Agent calls `retrieve_financial_data("PNL")` to fetch all quarters for Electronics (respecting RBAC)
+3. Calls `summarize_financial_data()` to compute quarterly summaries
+4. Uses built-in financial formulas: `growth_rate = (current - prior) / prior * 100`
+5. Generates a Mermaid visualization inline so you can see the trend visually
+6. Returns complete analysis with formulas shown
+
+**Why this is powerful**: The system went from "retrieve numbers" → "compute percentages" → "generate chart" in one interaction. No copy-pasting into Excel. No manual calculations.
+
+---
+
+### 📚 Scenario 4: Knowledge Base Integration
+
+**The Value**: Not all questions are about specific numbers. Sometimes users need definitions or policy guidance.
+
+#### Query: "What is EBIT?"
+
+![Knowledge Query](demo_screenshots/s2_03_knowledge_ebit.png)
+
+**What the response includes:**
+- Clear definition (Earnings Before Interest and Taxes)
+- Formula: EBIT = Gross Profit - Operating Expenses
+- Business context: "Measures core operating profitability before financing costs"
+- Policy note: Company guidance on when to use EBIT in variance reporting
+
+**How semantic search works:**
+1. Supervisor routes to Q&A Agent because it detects a "knowledge lookup" question
+2. Q&A Agent calls `search_knowledge_base("What is EBIT?")`
+3. System embeds the query into a 3072-dimensional vector using Gemini embeddings
+4. Searches PostgreSQL with cosine similarity against the knowledge_docs table
+5. Returns top 3 matching definitions (semantic ranking, not keyword matching)
+6. Claude synthesizes them into a coherent answer
+
+**Why this matters**: Definitions are fuzzy — a keyword search for "EBIT" would only match exact strings. Semantic search understands that "What does EBIT stand for?" is the same as "Define EBIT." It enables natural language exploration of company policies and financial terminology.
+
+---
+
+### 🔐 Scenario 5: RBAC in Action — Same Question, Different Answers
+
+**The Security**: This is the heart of enterprise security — automatic data filtering based on role.
+
+#### Alice Asks: "What was Electronics revenue in Q1?"
+
+![RBAC Alice](demo_screenshots/s3_01_rbac_alice.png)
+
+**Alice sees**: $15M (Asia region only)  
+**Behind the scenes**: The `retrieve_financial_data()` tool checks Alice's role (analyst, Electronics BU, Asia region) and filters the CSV to show **only rows matching**: business_unit == "Electronics" AND region == "Asia" AND period == "Q1". All other rows are invisible to the LLM.
+
+---
+
+#### Bob Asks the SAME Question: "What was Electronics revenue in Q1?"
+
+![RBAC Bob](demo_screenshots/s3_02_rbac_bob.png)
+
+**Bob sees**: $31M (all regions within Electronics)  
+**Breakdown**:
+- Asia: $15M
+- Europe: $9M  
+- Americas: $7M
+
+**Behind the scenes**: The tool checks Bob's role (BU GM, Electronics BU, all regions) and filters for: business_unit == "Electronics" AND period == "Q1" (no region restriction). Same period, different data scope.
+
+---
+
+#### David Asks the SAME Question: "What was Electronics revenue in Q1?"
+
+![RBAC David](demo_screenshots/s3_03_rbac_david.png)
+
+**David sees**: $57M+ (all BUs, all regions)  
+**Breakdown** (by BU):
+- Electronics: $31M (all regions)
+- Consumer Goods: $26M (all regions)
+
+**Behind the scenes**: The tool checks David's role (CFO, no restrictions) and returns: business_unit IN (all) AND region IN (all) AND period == "Q1". Complete visibility.
+
+---
+
+**The Lesson**: 
+> **Same question. Three different answers.**
+>
+> **Why?** Because RBAC is enforced at the **data layer before the LLM even sees the data**. When Alice asks for "Electronics revenue," the tool doesn't return all rows and let the LLM figure out her permissions. Instead, the tool **already filtered** to show only rows Alice can access. She literally cannot see Consumer Goods or other regions — not even by asking cleverly. This is critical for enterprise security — sensitive financial data must be protected automatically, not rely on LLM behavior.
+
+---
+
+### ✅ Scenario 6: Explainability & Auditability
+
+**The Requirement**: Every financial answer must be traceable and auditable.
+
+#### Query: "Which business unit had the highest margin in Q4?"
+
+![Explainability](demo_screenshots/s4_01_explainability.png)
+
+**The response includes:**
+1. **Clear answer** (top) — Consumer Goods had 15.8% margin
+2. **Comparison table** — All BUs side-by-side (Consumer Goods 15.8%, Electronics 15.1%)
+3. **Formula shown** — Margin = EBIT / Revenue (not a black box)
+4. **Step-by-step calculation** — $4.9M ÷ $31.0M = 15.8%
+5. **Data source** — "Financial P&L Report, Q4 2023, filtered for CFO access"
+
+**How the agent builds this:**
+1. Supervisor routes to Analytics Agent (because it's a comparison + ranking question)
+2. Agent calls `retrieve_financial_data("PNL")` to fetch all Q4 records
+3. Agent calls `summarize_financial_data()` to compute margins for each BU
+4. Claude structures the response with the answer first, then the supporting table, then the formula, then the calculations
+5. Source attribution is added: "Data source: Financial P&L Report, period: Q4 2023, role: CFO"
+
+**Why this matters**: Finance decisions are auditable. A CFO might ask this same question to a team member, and they'd explain: "Here's the number, here's where it came from, here's how I calculated it." The system does exactly that. If there's a dispute about the margin calculation later, you have the full audit trail right in the response. This is essential for regulatory compliance (SOX, GDPR, etc.).
+
+---
+
+### 📄 Scenario 7: Business Formats — Excel Report Generation
+
+**The Need**: Finance teams love Excel. Not everyone wants to read chat responses.
+
+#### Query: "Generate a P&L report for Electronics"
+
+![Excel Report](demo_screenshots/s5_01_Business_format.png)
+
+**What the system creates:**
+- Properly formatted Excel file with multiple worksheets
+- Summary sheet: Key metrics (Revenue, EBIT, Margin %)
+- Detail sheet: Data grouped by region and quarter
+- Currency formatting ($2.3M, not raw numbers like 2300000)
+- Professional headers, colors, borders, and subtotals
+- File saved to `/outputs/pnl_report_bu_gm_electronics.xlsx`
+- Download link provided instantly
+
+**How the report generation works:**
+1. Supervisor routes to **Report Agent** (because it detects "Generate a report")
+2. Report Agent calls `retrieve_financial_data("PNL")` to fetch Electronics rows (respecting user RBAC)
+3. Report Agent calls `generate_excel_report()` with the filtered data
+4. Tool formats the data:
+   - Creates Excel workbook with openpyxl
+   - Applies currency formatting (e.g., "$2.3M")
+   - Adds conditional formatting (red for variance > 5%)
+   - Writes summary + detail worksheets
+   - Saves to file system
+5. Returns download link to user
+
+**Why this matters**: Finance teams spend hours copying data into Excel and formatting it. Ask Finance does this in seconds. The report is RBAC-filtered automatically — if Alice requests it, she only gets Asia data. If Bob requests it, he gets all regions. No manual data filtering needed.
+
+---
+
+### 📊 Scenario 8: Inline Chart Visualization
+
+**The Insight**: Charts rendered directly in the chat for quick analysis.
+
+#### Query: "Show me Electronics Opex trend as a chart"
+
+![Chart Visualization](demo_screenshots/s5_02_show_in_chart.png)
+
+**What appears:**
+- Mermaid-generated line chart rendered inline in the browser
+- Visual trend line showing steady increase Q1 → Q4
+- Y-axis: Opex in millions ($2.1M to $2.5M)
+- X-axis: Quarters (Q1, Q2, Q3, Q4)
+- Trend analysis below: "+1.4% growth per quarter"
+- No download, no plugins — rendered natively in the chat
+
+**How inline visualization works:**
+1. Q&A Agent detects a "show as chart" request
+2. Fetches OPEX data for all quarters
+3. Claude generates Mermaid syntax:
+   ```
+   graph LR
+       Q1["Q1: $2.1M"] --> Q2["Q2: $2.2M"]
+       Q2 --> Q3["Q3: $2.3M"]
+       Q3 --> Q4["Q4: $2.4M"]
+   ```
+4. Mermaid library (running in browser) renders the chart instantly
+5. No API calls to charting services, no latency
+
+**Why this matters**: Charts in the chat make insights immediate. No need to open Excel, create a pivot table, and generate a chart. You ask, you see the visual instantly. Perfect for quick decision-making in meetings.
+
+### 🔄 Scenario 9: Multi-Turn Conversations with Memory
+
+**The Intelligence**: The system remembers context across multiple questions.
+
+#### Turn 1: "What was Electronics revenue in Q1?"
+**Response**: $31M for Bob
+**System action**: Stores the entire exchange (user message + assistant response) in `messages` list within LangGraph State
+
+#### Turn 2: "What about Q4?"
+**Response**: $30.5M for Bob
+**System action**: The supervisor reads the conversation history and understands "What about" refers to Electronics revenue (from Turn 1). No need for Bob to repeat "Electronics" or "revenue." The agent implicitly understands the context and queries for Q4 instead.
+
+#### Turn 3: "Show me the trend"
+**Response**: Full Q1-Q4 progression with chart
+**System action**: The agent now has access to two data points (Q1 and Q4 from previous turns). It recognizes "trend" means show all quarters between Q1-Q4. Fetches Q2 and Q3 data and generates the full picture.
+
+![Multi-turn Conversation](demo_screenshots/s6_01_mutiple_turn.png)
+
+**How conversation memory works:**
+1. Each exchange is stored in PostgreSQL via LangGraph checkpointer (keyed by `thread_id`)
+2. When Bob sends Turn 3, the entire conversation history is loaded:
+   ```
+   [Turn 1] Bob: "What was Electronics revenue in Q1?"
+   [Response] Assistant: "$31M..."
+   [Turn 2] Bob: "What about Q4?"
+   [Response] Assistant: "$30.5M..."
+   [Turn 3] Bob: "Show me the trend"
+   ```
+3. Claude reads this history and understands Electronics is the subject, revenue is the metric, Q1-Q4 is the time range
+4. Agent fetches all quarters and generates the trend
+
+**Why this matters**: Users don't speak like robots ("Please show me the trend for Electronics revenue for quarters Q1 through Q4"). They speak naturally, assuming the system remembers context. This feels like **talking to a real colleague** who was listening to the previous two questions. This is conversation memory at work — it makes the interaction feel intelligent and responsive.
+
+---
+
+### ⚠️ Scenario 10: Edge Cases & Security Gracefully Handled
+
+**The Robustness**: What happens when someone tries something unusual?
+
+#### Test 1: Unauthorized Access Attempt
+**Carol (Consumer Goods BU GM) tries to ask**: "What's the Electronics revenue?"
+
+**System response**: 
+> "I don't have access to Electronics division data. My role is restricted to Consumer Goods. For cross-BU analysis, please contact a Group CFO."
+
+**Why this happens**: 
+1. Carol asks the question
+2. Supervisor routes to Q&A Agent
+3. Q&A Agent calls `retrieve_financial_data()`
+4. Tool checks Carol's role: allowed_bus = ["Consumer Goods"], user requested "Electronics"
+5. Tool returns error message (not data): "Access denied: role Consumer Goods BU GM cannot access Electronics division"
+6. Q&A Agent passes this error to Claude, which formats a helpful response
+7. Carol sees the denial + suggestion to contact CFO
+
+**Security principle**: The tool doesn't return "no rows" (which could mislead). It explicitly tells the LLM "access denied," forcing a clear rejection message. Carol cannot trick the system by rewording the question or using synonyms — RBAC is enforced at the data layer, not the LLM layer.
+
+---
+
+#### Test 2: Malformed Query
+**User types gibberish**: "asdfkh jklsdf ???"
+
+![Edge Case](demo_screenshots/s7_01_edge_case.png)
+
+**System response**: 
+> "I didn't understand that question. Could you rephrase? Here are some examples:
+> - 'What was [BU] revenue in [quarter]?'
+> - 'Show me the [metric] trend'
+> - 'Generate a P&L report'
+> - 'What does [finance term] mean?'"
+
+**Why this works**:
+1. Supervisor Agent reads the gibberish and classifies intent as "unclear"
+2. Instead of routing to a specialist agent, Supervisor returns an error message with examples
+3. The examples are tailored to the user's role — Alice sees "Electronics" examples, David sees cross-BU examples
+4. User gets helpful guidance on how to ask better questions
+
+**Why this matters**: The system is resilient. It doesn't crash on unexpected input, doesn't hallucinate, doesn't try to guess what the user meant. Instead, it politely asks for clarification and provides training examples. This is good UX and good security — malformed input can't trigger unintended behavior.
+
+---
+
 ## Data Layers
 
 ### Structured Financial Data (Exact Queries)
